@@ -1,0 +1,5 @@
+taskstats-exporter (0.0.1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Josh Snyder <josh@code406.com>  Thu, 03 Nov 2016 18:59:15 -0700

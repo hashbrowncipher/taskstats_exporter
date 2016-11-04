@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 import sys
+from collections import defaultdict
+from errno import ENOENT
 from itertools import chain
 from time import sleep
 from wsgiref.simple_server import make_server
@@ -82,7 +84,40 @@ def yield_mapinfo(processes):
        
         for i in smaps_searchstrings: 
             yield 'procmaps_{}{{name="{}", pid="{}"}} {}'.format(i.lower()[:-1], name, pid, stats[i])
-            
+
+schedstat_fields = (
+    ('oncpu', 1000),
+    ('waiting', 1000),
+    ('slices', 1),
+)
+
+def yield_niced_delays(processes):
+    for name, pid in processes:
+        delayacct_blkio_ticks = defaultdict(int)
+        schedstat_dicts = [defaultdict(int) for i in schedstat_fields]
+        for tid in os.listdir('/proc/{}/task'.format(pid)):
+            try:
+                with open('/proc/{}/stat'.format(tid)) as stat_f:
+                    stat = stat_f.readline()
+                split_stat = stat.split()
+                nice = int(split_stat[18])
+                if nice == 0:
+                    continue
+                delayacct_blkio_ticks[nice] += int(split_stat[41]) * clk_tck_factor
+                with open('/proc/{}/schedstat'.format(tid)) as schedstat_f:
+                    schedstat = schedstat_f.readline()
+                for d, v in zip(schedstat_dicts, schedstat.split()):
+                    d[nice] += int(v)
+            except IOError as e:
+                if e.errno != ENOENT:
+                    pass
+
+        for nice, val in delayacct_blkio_ticks.items():
+            yield 'thread_blkio_delay{{name="{}", pid="{}", nice="{}"}} {}'.format(name, pid, nice, delayacct_blkio_ticks[nice])
+        for (field, factor), d in zip(schedstat_fields, schedstat_dicts):
+            for nice, val in d.items():
+                yield 'thread_schedstat_{}{{name="{}", pid="{}", nice="{}"}} {}'.format(field, name, pid, nice, val * factor)
+
 
 def get_pids_from_file(pidfile):
     return map(int, open(pidfile, 'r'))
@@ -99,6 +134,7 @@ def get_pids(directory):
 
         for i in pids:
             yield name, i
+
                      
 def handle(directory):
     processes = tuple(get_pids(directory))
@@ -106,6 +142,7 @@ def handle(directory):
         yield_taskstats(processes),
         yield_procstats(processes),
         yield_mapinfo(processes),
+        yield_niced_delays(processes),
     )
 
     for i in output:
