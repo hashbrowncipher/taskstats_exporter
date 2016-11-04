@@ -12,7 +12,10 @@ information is collected:
 Installation and usage
 ----------------------
 
-The taskstats exporter is installable as a Python egg. It expects to read named pidfiles from a directory
+The taskstats exporter is installable as a Python egg. It expects to read named
+pidfiles from a directory. The directory is automatically scanned on each
+prometheus scrape: there is no need to restart the exporter when the directory
+contents change.
 
 Usage:
 ::
