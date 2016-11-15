@@ -92,11 +92,9 @@ def yield_mapinfo(processes):
         for i in smaps_searchstrings:
             yield 'procmaps_{}{{name="{}", pid="{}"}} {}'.format(i.lower()[:-1], name, pid, stats[i])
 
-schedstat_fields = (
-    ('oncpu', 1000),
-    ('waiting', 1000),
-    ('slices', 1),
-)
+# the time fields are all in nanoseconds
+# contrary to some sources which say jiffies
+schedstat_fields = ('oncpu', 'waiting', 'slices')
 
 
 def yield_niced_delays(processes):
@@ -124,9 +122,9 @@ def yield_niced_delays(processes):
 
         for nice, val in delayacct_blkio_ticks.items():
             yield 'thread_blkio_delay{{name="{}", pid="{}", nice="{}"}} {}'.format(name, pid, nice, delayacct_blkio_ticks[nice])
-        for (field, factor), d in zip(schedstat_fields, schedstat_dicts):
+        for field, d in zip(schedstat_fields, schedstat_dicts):
             for nice, val in d.items():
-                yield 'thread_schedstat_{}{{name="{}", pid="{}", nice="{}"}} {}'.format(field, name, pid, nice, val * factor)
+                yield 'thread_schedstat_{}{{name="{}", pid="{}", nice="{}"}} {}'.format(field, name, pid, nice, val)
 
 
 def get_pids_from_file(pidfile):
