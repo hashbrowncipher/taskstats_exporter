@@ -40,12 +40,15 @@ interesting_procstat_fields = (
 
 smaps_searchstrings = ['Pss:']
 
+
 def issue_request(ts, msg):
     return ts.nlm_request(msg, ts.prid, msg_flags=NLM_F_REQUEST)
+
 
 def unpack_msg(msg):
     #delays = lambda a: (lambda attrs: (attrs['cpu_delay_total'], attrs['cpu_run_real_total']))(a[0]['attrs'][0][1]['attrs'][1][1])
     return msg[0]['attrs'][0][1]['attrs'][1][1]
+
 
 def do_query(ts, pid):
     msg = tcmd()
@@ -53,6 +56,7 @@ def do_query(ts, pid):
     msg['version'] = 1
     msg['attrs'].append(['TASKSTATS_CMD_ATTR_TGID', pid])
     return unpack_msg(issue_request(ts, msg))
+
 
 def yield_taskstats(processes):
     ts = TaskStats()
@@ -66,12 +70,15 @@ def yield_taskstats(processes):
     finally:
         ts.close()
 
+
 def yield_procstats(processes):
     for name, pid in processes:
-        stat_fields = open('/proc/{}/stat'.format(pid)).readline().rstrip().split(' ') 
+        stat_fields = open('/proc/{}/stat'.format(pid)
+                           ).readline().rstrip().split(' ')
         for field, pos, factor in interesting_procstat_fields:
             value = int(stat_fields[pos - 1]) * factor
             yield 'procstat_{}{{name="{}", pid="{}"}} {}'.format(field, name, pid, value)
+
 
 def yield_mapinfo(processes):
     for name, pid in processes:
@@ -81,8 +88,8 @@ def yield_mapinfo(processes):
                 if line.startswith(i):
                     value = int(line.split()[1])
                     stats[i] += value
-       
-        for i in smaps_searchstrings: 
+
+        for i in smaps_searchstrings:
             yield 'procmaps_{}{{name="{}", pid="{}"}} {}'.format(i.lower()[:-1], name, pid, stats[i])
 
 schedstat_fields = (
@@ -90,6 +97,7 @@ schedstat_fields = (
     ('waiting', 1000),
     ('slices', 1),
 )
+
 
 def yield_niced_delays(processes):
     for name, pid in processes:
@@ -103,7 +111,9 @@ def yield_niced_delays(processes):
                 nice = int(split_stat[18])
                 if nice == 0:
                     continue
-                delayacct_blkio_ticks[nice] += int(split_stat[41]) * clk_tck_factor
+                delayacct_blkio_ticks[nice] += (
+                    int(split_stat[41]) * clk_tck_factor
+                )
                 with open('/proc/{}/schedstat'.format(tid)) as schedstat_f:
                     schedstat = schedstat_f.readline()
                 for d, v in zip(schedstat_dicts, schedstat.split()):
@@ -122,6 +132,7 @@ def yield_niced_delays(processes):
 def get_pids_from_file(pidfile):
     return map(int, open(pidfile, 'r'))
 
+
 def get_pids(directory):
     for basename in os.listdir(directory):
         name = basename.split('.')[0]
@@ -135,7 +146,7 @@ def get_pids(directory):
         for i in pids:
             yield name, i
 
-                     
+
 def handle(directory):
     processes = tuple(get_pids(directory))
     output = chain(
@@ -157,6 +168,7 @@ def make_app(directory):
         start_response(status, headers)
         return stats
     return app
+
 
 def main():
     app = make_app(sys.argv[1])
