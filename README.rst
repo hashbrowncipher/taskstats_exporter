@@ -1,10 +1,10 @@
 taskstats_exporter: A Prometheus exporter for Linux process statistics
 ======================================================================
 
-This is a Prometheus exporter for information about Linux tasks. The following
-information is collected:
+This is a Prometheus exporter for performance information about Linux tasks.
+The following information is collected:
  * task accounting statistics from netlink for the task itself and all of its
-   threads
+   threads, living or dead
  * basic process statistics from /proc/<pid>/stat
  * proportional set size
  * block I/O delays and scheduler statistics for niced threads
@@ -15,11 +15,12 @@ Installation and usage
 The taskstats exporter is installable as a Python egg. It expects to read named
 pidfiles from a directory. The directory is automatically scanned on each
 prometheus scrape: there is no need to restart the exporter when the directory
-contents change.
+contents change. The user running taskstats_exporter must be root or have
+CAP_NET_ADMIN.
 
 Usage:
 ::
-  $ taskstats_exporter <pidfiles_dir> <listen_port>
+  # taskstats_exporter <pidfiles_dir> <listen_port>
 
 Example:
 ::
